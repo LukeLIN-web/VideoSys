@@ -208,8 +208,9 @@ class OpenSoraPipeline(VideoSysPipeline):
         self._dtype = dtype
 
         # initialize the model if not provided
-        if text_encoder is None:
-            text_encoder = T5EncoderModel.from_pretrained(config.text_encoder).to(dtype)
+        # if text_encoder is None:
+            # text_encoder = T5EncoderModel.from_pretrained(config.text_encoder).to(dtype)
+            # text_encoder = None
         if tokenizer is None:
             tokenizer = AutoTokenizer.from_pretrained(config.text_encoder)
         if vae is None:
@@ -239,7 +240,8 @@ class OpenSoraPipeline(VideoSysPipeline):
         if config.cpu_offload:
             self.enable_model_cpu_offload()
         else:
-            self.set_eval_and_device(self._device, vae, transformer, text_encoder)
+            # self.set_eval_and_device(self._device, vae, transformer, text_encoder)
+            self.set_eval_and_device(self._device, vae, transformer)
 
         # parallel
         self._set_parallel()
@@ -267,23 +269,32 @@ class OpenSoraPipeline(VideoSysPipeline):
         self.transformer.enable_parallel(dp_size, sp_size, enable_cp)
 
     def get_text_embeddings(self, texts):
-        text_tokens_and_mask = self.tokenizer(
-            texts,
-            max_length=300,
-            padding="max_length",
-            truncation=True,
-            return_attention_mask=True,
-            add_special_tokens=True,
-            return_tensors="pt",
-        )
-        device = self._execution_device
-        input_ids = text_tokens_and_mask["input_ids"].to(device)
-        attention_mask = text_tokens_and_mask["attention_mask"].to(device)
-        with torch.no_grad():
-            text_encoder_embs = self.text_encoder(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
-            )["last_hidden_state"].detach()
+        # text_tokens_and_mask = self.tokenizer(
+        #     texts,
+        #     max_length=300,
+        #     padding="max_length",
+        #     truncation=True,
+        #     return_attention_mask=True,
+        #     add_special_tokens=True,
+        #     return_tensors="pt",
+        # )
+        # device = self._execution_device
+        # input_ids = text_tokens_and_mask["input_ids"].to(device)
+        # attention_mask = text_tokens_and_mask["attention_mask"].to(device)
+        # with torch.no_grad():
+        #     text_encoder_embs = self.text_encoder(
+        #         input_ids=input_ids,
+        #         attention_mask=attention_mask,
+        #     )["last_hidden_state"].detach()
+
+        # torch.save({
+        #     "text_embeddings": text_encoder_embs,
+        #     "attention_mask": attention_mask
+        # }, "embeddings_and_mask.pt")
+
+        data = torch.load("embeddings_and_mask.pt")
+        text_encoder_embs = data["text_embeddings"].to(self._execution_device)
+        attention_mask = data["attention_mask"].to(self._execution_device)
         return text_encoder_embs, attention_mask
 
     def encode_prompt(self, text):

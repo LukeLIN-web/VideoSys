@@ -144,7 +144,6 @@ dmypy.json
 docs/.build
 
 # pytorch checkpoint
-*.pt
 
 # ignore any kernel build files
 .o
